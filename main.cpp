@@ -2,7 +2,7 @@
 #include <list>
 #include <math.h>
 #include "stems.h"
-#include "nr_rsg.h"
+#include "nr_RSG.h"
 
 
 #define NEW_BALANCE // Flag to turn on random placement of new stems in the list (enforces detailed balance for all microstates)
