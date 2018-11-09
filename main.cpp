@@ -1,6 +1,7 @@
 #include <iostream>
 #include <list>
 #include <math.h>
+#include <stdlib.h>
 #include "stems.h"
 #include "nr_RSG.h"
 
