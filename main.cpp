@@ -7,32 +7,20 @@
 
 
 #define NEW_BALANCE // Flag to turn on random placement of new stems in the list (enforces detailed balance for all microstates)
+#define AR (1.32934038817914)
 
-//===About 9kBT at 20 segs( for ANG_TOL = 4PI)=====================
-//==Nuc time = 3.138215e+04 tau ===================================
-#define EBULK 0.0//1.9
-#define ESURFACE 0.0//1.9
-#define AR (1.33 * 1.0)
-
-//===About 8kBT at 30 segs( for ANG_TOL = 2PI)=====================
-//Can compensate for change in angular tollerance by adding -ln( change in angTol)
-//on to EBULK. This preserves the free energy landscape but changes the kinetics!
-//#define EBULK 0.03
-//#define ESURFACE 0.27//0.22 0.25
+#define EBULK 1.9
+#define ESURFACE 1.9
+#define TOTAL_SEGS 30 //no more than 270
+#define TOTAL_STEMS 30
 
 
 
 #define PI 3.141592654
 #define ANG_TOL (4 * PI)
-//#define ANG_TOL (2 * PI)
 
 
 
-
-
-
-#define TOTAL_SEGS 500 //no more than 270
-#define TOTAL_STEMS 500
 //#define LONGEST_STEM 2
 #define MIN_STEMS 1
 #define MIN_SEGS 1

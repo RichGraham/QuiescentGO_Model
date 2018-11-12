@@ -13,7 +13,7 @@ SOURCES= main.cpp ran1.c
 
 OBJECTS= main.o ran1.o	
 
-PRODUCT=a.out
+PRODUCT=QuiescentGO_model
 
 CC=g++
 
