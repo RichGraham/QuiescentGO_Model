@@ -1,0 +1,3 @@
+ebulk		-0.41
+esurface	0.3
+total_segments	250

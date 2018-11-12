@@ -2,19 +2,13 @@
 #include <list>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include "stems.h"
 #include "nr_RSG.h"
 
 
 #define NEW_BALANCE // Flag to turn on random placement of new stems in the list (enforces detailed balance for all microstates)
 #define AR (1.32934038817914)
-
-#define EBULK 1.9
-#define ESURFACE 1.9
-#define TOTAL_SEGS 30 //no more than 270
-#define TOTAL_STEMS 30
-
-
 
 #define PI 3.141592654
 #define ANG_TOL (4 * PI)
@@ -29,6 +23,20 @@
 
 #define FINISH_TIME 1.0e5
 
+
+
+static double EBULK ;
+static double ESURFACE;
+static int TOTAL_SEGS;
+static int TOTAL_STEMS;
+
+static char simName[50];
+static char calcName[50];
+
+#define MAX_SEGS 400
+#define MAX_STEMS 400
+
+
 static void firstPoint( list < StemPtr >  *cry);
 static void newPoint(list < StemPtr > *cry);
 static void addStem(list < StemPtr > *cry, int addSpecies);
@@ -39,7 +47,7 @@ int countSegments( list < StemPtr > crystal );
 void catiousTesting( list < StemPtr > cry );
 
 
-void calculateDegeneracy( double degen[TOTAL_SEGS+1][TOTAL_STEMS+1] );
+void calculateDegeneracy( double degen[MAX_SEGS+1][MAX_STEMS+1] );
 
 double surfaceAreaEllipse( int NT, int Ns);
 double freeEnergy( int NT, int Ns);
@@ -57,7 +65,7 @@ static int pickAndMakeMove( list < StemPtr > *cry, double rateSum );
 static double sideAreaFunction( int Ns);
 double degeneracyFactor( int NT, int Ns );
 
-double getDegPoint( double degen[TOTAL_SEGS+1][TOTAL_STEMS+1], int seg, int stem );
+double getDegPoint( double degen[MAX_SEGS+1][MAX_STEMS+1], int seg, int stem );
 
 double facRatio( long a, long b);
 
@@ -76,7 +84,7 @@ void findNucTime();
 void findNucFrac();
 
 
-double computeTotalFreeEnergy( int Nt, double degen[TOTAL_SEGS+1][TOTAL_STEMS+1]);
+double computeTotalFreeEnergy( int Nt, double degen[MAX_SEGS+1][MAX_STEMS+1]);
 template <class T> inline const T& myMin ( const T& a, const T& b );
 template <class T> inline const T& myMax ( const T& a, const T& b );
 
@@ -87,16 +95,30 @@ double addStemRate_global; //needed to save recomputing this value
 
 long seed;
 
+void ReadInput( char inputfilename[]);
 
-
-int main()
+int main(int argc, char *argv[] )
 {
-  int i,j, counter=0;
-  int max=9;
+
+  
+   //====Check correct number of args and that input file exisits================
+  if(argc != 2){
+    printf("QuiescentGO_model Usage: [filename string]\n");
+    exit(EXIT_FAILURE);
+  }
+
+  //====Read the input file====
+  ReadInput( argv[1]);
+
+  //====Create output filenames====
+  std:: string filename(argv[1]);
+  size_t lastindex = filename.find_last_of("."); 
+  string rawname = filename.substr(0, lastindex);
+  sprintf(simName,"%s_sim.dat",rawname.c_str());
+  sprintf(calcName,"%s_calc.dat",rawname.c_str());
   
 
- 
-
+  //====Run the calculation====
   plotLandscape();
   //findNucTime ();
   //findNucFrac();
@@ -111,7 +133,7 @@ void findNucTime()
 
   //*******CHECK THE SIDE AREA FUNCTION IS WHAT YOU EXPECT IT TO BE!!!!!******************************************
 
-#ifdef TOTAL_SEGS
+#ifdef MAX_SEGS
    list<StemPtr> crystal;
    long i;
    int j,event, runNumber;
@@ -200,7 +222,7 @@ void findNucFrac()
   //*******CHECK THE SIDE AREA FUNCTION IS WHAT YOU EXPECT IT TO BE!!!!!**************************************************************
 
 
-#ifdef TOTAL_SEGS
+#ifdef MAX_SEGS
    list<StemPtr> crystal;
    long i;
    int j,event, runNumber;
@@ -275,17 +297,17 @@ void findNucFrac()
   
 void plotLandscape()
 {
-#ifdef TOTAL_SEGS
+#ifdef MAX_SEGS
    list<StemPtr> crystal;
    long i,  segsLastStep, stemsLastStep;
    int j,k,event;
    double rateSum, sTime, timeIncre,  sum;
-   //   double F[TOTAL_SEGS+1]={0.0}, partFn;
+   //   double F[MAX_SEGS+1]={0.0}, partFn;
    list<StemPtr>::iterator iL, eventItr;
-   double accTime[TOTAL_SEGS+1]={0.0};
+   double accTime[MAX_SEGS+1]={0.0};
 
-   double accTime2[TOTAL_SEGS+1][TOTAL_STEMS+1]={0.0};
-   double degen[TOTAL_SEGS+1][TOTAL_STEMS+1]={0.0};
+   double accTime2[MAX_SEGS+1][MAX_STEMS+1]={0.0};
+   double degen[MAX_SEGS+1][MAX_STEMS+1]={0.0};
    long int state211=0, state121=0, state112=0;
    long int state22=0, state13=0, state31=0;
 
@@ -310,7 +332,7 @@ void plotLandscape()
    calculateDegeneracy( degen );
   
 
-   cfPtr = fopen("Calc.dat","w");
+   cfPtr = fopen(calcName,"w");
 
    for(i=1; i<=TOTAL_SEGS ; i++){
      fprintf(cfPtr,"%f %e\n",1.0*i, computeTotalFreeEnergy( i , degen ) );
@@ -417,7 +439,7 @@ void plotLandscape()
        for(j=1; j<=TOTAL_SEGS ; j++)	 sum += accTime[j];
 
 
-       cfPtr = fopen("data.dat","w");
+       cfPtr = fopen(simName,"w");
 
        for( j=1; j<=TOTAL_SEGS; j++){
 	 //printf("%d) %f %f\n",j, accTime[j]/sTime, F[j]/partFn);
@@ -530,7 +552,7 @@ static int pickAndMakeMove( list < StemPtr > *cry, double rateSum )
   event = 1;
   rateAcc += addStemRate_global * ANG_TOL/(4 * PI);
   if( ranNum < rateAcc ){
-#ifdef TOTAL_SEGS
+#ifdef MAX_SEGS
     if( nSegs == TOTAL_SEGS) return event;// care!!
 #endif
 #ifdef NO_MOVE
@@ -548,7 +570,7 @@ static int pickAndMakeMove( list < StemPtr > *cry, double rateSum )
     (event) ++;
     rateAcc += (*iP)->addTop;
     if( ranNum < rateAcc ){
-#ifdef TOTAL_SEGS
+#ifdef MAX_SEGS
       if( nSegs == TOTAL_SEGS) return event;// care!!
 #endif
 
@@ -604,7 +626,7 @@ static int pickAndMakeMove( list < StemPtr > *cry, double rateSum )
     (event) ++;
     rateAcc += (*iP)->addBot;
     if( ranNum < rateAcc ){
-#ifdef TOTAL_SEGS
+#ifdef MAX_SEGS
       if( nSegs == TOTAL_SEGS) return event;// care!!
 #endif
 
@@ -938,7 +960,7 @@ double degeneracyFactor( int NT, int Ns )
     return 1.0;
 }
 
-void calculateDegeneracy( double degen[TOTAL_SEGS+1][TOTAL_STEMS+1] )
+void calculateDegeneracy( double degen[MAX_SEGS+1][MAX_STEMS+1] )
 {
   int row, col;
   int step;
@@ -1006,7 +1028,7 @@ double getDegen(int T, int S)
     return facRatio(T-1, T-S) / factorial(S-1);
 }
 
-double computeTotalFreeEnergy( int Nt, double degen[TOTAL_SEGS+1][TOTAL_STEMS+1])
+double computeTotalFreeEnergy( int Nt, double degen[MAX_SEGS+1][MAX_STEMS+1])
 {
   double Zn=0.0;
   int stem;
@@ -1043,3 +1065,43 @@ static double computeAspectRatio( double Nt, double Ns)
 {
   return AR * Nt/ Ns/ sqrt(Ns); 
 }  
+
+
+
+void ReadInput( char inputfilename[]){
+  
+  FILE *file; // Input file
+  int success;
+  char CoordType[20];
+  double dummy1;
+  char line[64];
+
+  if( (file = fopen(inputfilename,"r")) == NULL ){
+    printf("Input file not found: %s\n",inputfilename);
+    exit(EXIT_FAILURE);
+  }
+  
+  while(fgets(line,sizeof(line),file))
+    {
+ 
+      success = sscanf(line,"%s %lf",CoordType,&dummy1);
+      if(success == 2) {
+	if( strcmp(CoordType ,"ebulk") == 0){
+	  EBULK = dummy1;
+	  printf("Found ebulk\t%f\n",dummy1);
+	}else if( strcmp(CoordType ,"esurface") == 0){
+	  ESURFACE = dummy1;
+	  printf("Found esurface\t%f\n",dummy1);
+	}else	if( strcmp(CoordType ,"total_segments") == 0){
+	  TOTAL_SEGS = dummy1;
+	  TOTAL_STEMS = dummy1;
+	  printf("Found total_segments\t%f\n",dummy1);
+	} 
+      }
+    }
+  fclose(file);
+  return;
+  //=============================================================================
+  
+}
+
